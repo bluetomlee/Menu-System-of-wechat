@@ -1,4 +1,4 @@
-Menu-System-of-wechat
+Menu-System-of-Wechat
 =====================
 
-by angular
+by Angular
