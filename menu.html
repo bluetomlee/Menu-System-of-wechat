@@ -2,7 +2,7 @@
 
 <!-- 场景一（展示列表时） -->
 <div class="menu_preview_list">
-	<div class="item" ng-repeat="ibtn in btn_list.items | limitTo:1" ng-init="parent = $index">
+	<div class="item item_menu" ng-repeat="ibtn in btn_list.items track by $index" ng-init="parent = $index">
 		<div class="menu_preview">
 			<div class="menu_preview_start">
 				<button class="btn btn-default" ng-click="editAble=true" ng-show="!editAble">编辑</button>
@@ -33,17 +33,18 @@
 			<div><button class="btn btn-success" ng-click="createOne(ibtn)" ng-show="ibtn.button.length<3">添加一级菜单</button></div>
 			<ul class="menu_preview_tree_list" ng-repeat="first in ibtn.button" ng-init="one = $index">
 				<li><span>{{first.name}}
-				<button class="btn btn-success btn-xs btn-repty" ng-show="!first.sub_button" ng-hide="first.type" ng-click="open(parent,first,one)">添加回复</button>
-				<button class="btn btn-success btn-xs btn-repty" ng-show="first.type" ng-hide="first.sub_button" ng-click="open(parent,first,one)">修改回复</button>
 				<a href="javascript:" class="glyphicon glyphicon-pencil" ng-click="editInput(first)"></a>
-				<a href="javascript:" class="glyphicon glyphicon-remove" ng-click="removeItems(ibtn.button,$index)"></a></span>
+				<a href="javascript:" class="glyphicon glyphicon-remove" ng-click="removeItems(ibtn.button,$index)"></a>
+				<button class="btn btn-success btn-xs btn-repty {{(first.sub_button.length==0)?'':'hide'}}" ng-show="!first.sub_button" ng-hide="first.type" ng-click="open(parent,first,one)">添加回复</button>
+				<button class="btn btn-success btn-xs btn-repty" ng-show="first.type" ng-hide="first.sub_button" ng-click="open(parent,first,one)">修改回复</button>
+					</span>
 					<ul class="menu_preview_tree_list_sub">
 						<li ng-repeat="second in first.sub_button"><span ng-show="second">{{second.name}}</span> 
 							<a href="javascript:" class="glyphicon glyphicon-pencil" ng-click="editInput(second)"></a>
 							<a href="javascript:" class="glyphicon glyphicon-remove" ng-click="removeItems(first.sub_button,$index)"></a>
-							<button class="btn btn-success btn-xs btn-repty" ng-show="!second.type" ng-click="open(parent,second,$index,one)">添加回复{{second.url}}</button>
-							<button class="btn btn-success btn-xs btn-repty" ng-show="second.type" ng-click="open(parent,second,$index,one)">修改回复</button>
-							<span class="danger_msg" ng-hide="second.type">错误：请添加回复!</span>
+							<button class="btn btn-success btn-xs btn-repty {{(!second.type)?'':'hide'}}" ng-show="!second.type" ng-click="open(parent,second,$index,one)">添加回复</button>
+							<button class="btn btn-success btn-xs btn-repty {{(second.type)?'':'hide'}}" ng-show="second.type" ng-click="open(parent,second,$index,one)">修改回复</button>
+							<span class="danger_msg {{(!second.type)?'':'hide'}}">错误：请添加回复!</span>
 						</li>
 						<li><button class="btn btn-success btn-xs" ng-click="remindConfirm(first)" ng-hide="first.sub_button.length==5">添加二级菜单</button></li>
 					</ul>
@@ -56,7 +57,7 @@
 			<div class="menu_preview_submit">
 				<button class="btn btn-success" ng-click="saveMenu(ibtn)">保存</button>
 				<button class="btn btn-danger" ng-click="publishMenu(ibtn.id)">发布</button>
-				<!-- <button class="btn btn-danger" ng-click="removeMenu(ibtn.id)">删除</button> -->
+				<button class="btn btn-danger" ng-click="removeMenu(ibtn.id)">删除</button>
 			</div>
 		</div>
 		<div class="menu_active">
@@ -64,7 +65,7 @@
 		</div>
 	</div>
 	<!-- add menu -->
-	<div class="menu_preview" ng-hide="btn_list.items[0].button">
+	<div class="menu_preview">
 		<div class="menu_preview_start"><button class="btn btn-default" ng-click="createOne(btn_list,1)">添加</button></div>
 		<div class="menu_preview_mask" ng-show="!newItemStatus"></div>
 	</div>
