@@ -12,17 +12,19 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 
     	// 初始化菜单参数
     	var menuOption= {
+    		id: "",
     		button:[{
 	           "name":null,
 	           "sub_button":[
 	               {
 	                   "type":"",
-	                   "name":"",
+	                   "name":"二级菜单",
 	                   "key":"",
 	                   "url":""
 	               }
 	           ]            
-    		}]
+    		}],
+    		active:false
     	};
 
     	// menu list
@@ -32,7 +34,6 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
     		.success(function(data){
     			$scope.editAble = false;
     			$scope.btn_list = data; 
-    			console.log($scope.btn_list)
     		})
     	};
 
@@ -59,7 +60,7 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 				})
 			}else{
 				notify({
-					message: '操作失败',
+					message: data.message,
 					classes: 'alert-success'
 				})
 			}
@@ -81,33 +82,33 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 				title: '请输入一级菜单名称',
 				input: true,
 			}).then(function(result){
+				
+				//console.log(menuOption)
+				
+				var newOne = cloneObj(menuOption);
+			
 				if(add == 1){
 					var a = $scope.btn_list.items.length;
-					$scope.btn_list.items.splice(a,0,menuOption);
+					$scope.btn_list.items.push(newOne);
 					$scope.btn_list.items[a].button[0].name = result;
 					$scope.newItemStatus = true;
-					console.log(a,result)
+					console.log(a,$scope.btn_list)
+					
 				}else{
 		    		var button = {
-			           "name":null,
-			           // "sub_button":[
-			           //     {
-			           //         "type":"",
-			           //         "name":"",
-			           //         "key":"",
-			           //         "url":""
-			           //     }
-			           // ]            
+			           "name":null,          
 		    		}
-		    		// if(first.btton[0])
 					first.button.splice(0,0,button);
 					first.button[0].name = result;
 					// console.log(111,!first.button[0].type)
 				}
+				
 			});
 
 			
 		};
+		
+		
 		$scope.createTwo = function(first){
 			// console.log(1,first,first.sub_button)
 			prompt({
@@ -183,7 +184,7 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 		};
 		
 		
-		$scope.cloneObj = function (obj){
+		function cloneObj(obj){
 
 			var o, obj;  
 			if (obj.constructor == Object){  
@@ -194,7 +195,7 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 			for(var key in obj){  
 				if ( o[key] != obj[key] ){   
 					if ( typeof(obj[key]) == 'object' ){   
-						o[key] = $scope.cloneObj(obj[key]);  
+						o[key] = cloneObj(obj[key]);  
 					}else{  
 						o[key] = obj[key];
 					}  
@@ -208,16 +209,8 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 		
 		$scope.saveMenu = function(ibtn){
 			
-			var postData = $scope.cloneObj(ibtn);
-		
-			if(!postData.id){
-				$scope.createMenu(postData.button);
-			}
-			else{
-				
-				//console.log(postData);
-				//return;
-				var _error=0;
+			var postData = cloneObj(ibtn);
+			var _error=0;
 				if(postData.button.length){
 					
 					var tempBtnArr =[];
@@ -227,7 +220,7 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 						var sub_btn = btn.sub_button
 						//console.log(btn);
 						
-						if( sub_btn==undefined ){
+						if( sub_btn==undefined){
 							
 							if(btn.type=='' && btn.key==''){
 								_error++;
@@ -246,26 +239,27 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 							var t_arr=[];
 							for(var i = 0;i<sub_btn.length;i++){
 								
-								if(sub_btn[i].type == undefined){
-									_error++;
-									notify({
-										message: '保存失败：请为菜单【'+sub_btn[i].name+'】添加回复',
-										classes: 'alert-error'
-									})
+								// if(sub_btn[i].type == undefined){
+								// 	_error++;
+								// 	notify({
+								// 		message: '保存失败：请为菜单【'+sub_btn[i].name+'】添加回复',
+								// 		classes: 'alert-error'
+								// 	})
 									
-									break;
-								}
-								
+								// 	break;
+								// }
+								var arr = sub_btn[i] instanceof Array;
+								// alert(arr);
 								//console.log(sub_btn[i].type, sub_btn[i].type!='' && sub_btn[i].key!='');
-								if( sub_btn[i].type!='' && sub_btn[i].key!='' ){
+								if( sub_btn[i].type!='' && sub_btn[i].key!='' && !arr){
 									
 									t_arr.push(sub_btn[i])
 
 								}
 
 							}
-							//console.log(t_arr);
 							if(!t_arr.length){
+
 								delete btn.sub_button
 							}else{
 								btn.sub_button = t_arr;
@@ -282,10 +276,18 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 					
 				}
 				
-				console.log(postData);
+				// console.log(postData);
 				if(_error>0){
 					return;
 				}
+			if(!postData.id){
+				$scope.createMenu(postData);
+			}
+			else{
+				
+				//console.log(postData);
+				//return;
+				
 				//return;
 				
 				$http({
@@ -335,23 +337,27 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 				dataType: 'json',
 				data: {
 					applicationId: $scope.applicationId,
-					   "button":ibtn
+					   "button":ibtn.button
 				},
 				headers: {'Content-Type': 'application/x-www-form-urlencoded'}
 			}).success(function(data){
 				if(data.success){
+					ibtn.id = data.id;
 					$scope.remindInfor(data);
 					$scope.refreshMenuList();
+				}else{
+					$scope.remindInfor(data);
 				}
 
 			})
 		};
 
 		$scope.publishMenu = function(id){
+			console.log(id);
 			$http({
 				method: 'POST',
 				dataType: 'json',
-				url: '/japi/weixin/menu/publish?id=' + '&applicationId=' + $scope.applicationId,
+				url: '/japi/weixin/menu/publish?id=' + id +'&applicationId=' + $scope.applicationId,
 				headers: {'Content-Type': 'application/x-www-form-urlencoded'}
 			}).success(function(data){
 				var item = $scope.btn_list.items;
@@ -393,44 +399,32 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 );
 
 
-menu_module.controller('replyModalCtrl',['$scope', '$http','$timeout','$modal', '$modalInstance', function($scope, $http, $timeout,$modal,$modalInstance){
+menu_module.controller('replyModalCtrl',['$scope', '$http','$timeout','$modal', '$modalInstance', 'notify', function($scope, $http, $timeout,$modal,$modalInstance,notify){
 	$scope.save_reply = function () {
 		if($scope.replyType=='keyword'){
+			if(!$scope.reply_keyword){
+				notify({
+					message: '请选择口令',
+					classes: 'alert-success'
+				});
+				return;
+			}
 			for (var i = $scope.reply_keywords.length - 1; i >= 0; i--) {
 				if($scope.reply_keywords[i].key == $scope.reply_keyword){
 					$scope.replyType = $scope.reply_keywords[i].type;
 				}
 			};
 		}
-		var data = {success:true}
-		if($scope.one == undefined){
-			if(!$scope.btn_list.items[$scope.parentMenu].button[$scope.index].type){
-				$scope.btn_list.items[$scope.parentMenu].button[$scope.index].type = ''
-			}else if(!$scope.btn_list.items[$scope.parentMenu].button[$scope.index].key){
-				$scope.btn_list.items[$scope.parentMenu].button[$scope.index].key = ''
-			}else if(!$scope.btn_list.items[$scope.parentMenu].button[$scope.index].url){
-				$scope.btn_list.items[$scope.parentMenu].button[$scope.index].url = ''
-			}
-			$scope.btn_list.items[$scope.parentMenu].button[$scope.index].type = $scope.replyType;
-			$scope.btn_list.items[$scope.parentMenu].button[$scope.index].key = $scope.reply_keyword;
-			$scope.btn_list.items[$scope.parentMenu].button[$scope.index].url = $scope.reply_link;
-			$modalInstance.close($scope.btn_list.items[$scope.parentMenu].button[$scope.index]);
-		}else{
-			if(!$scope.btn_list.items[$scope.parentMenu].button[$scope.one].sub_button[$scope.index].type){
-				$scope.btn_list.items[$scope.parentMenu].button[$scope.one].sub_button[$scope.index].type = ''
-			}else if(!$scope.btn_list.items[$scope.parentMenu].button[$scope.one].sub_button[$scope.index].key){
-				$scope.btn_list.items[$scope.parentMenu].button[$scope.one].sub_button[$scope.index].key = ''
-			}else if(!$scope.btn_list.items[$scope.parentMenu].button[$scope.one].sub_button[$scope.index].url){
-				$scope.btn_list.items[$scope.parentMenu].button[$scope.one].sub_button[$scope.index].url = ''
-			}
-			console.log($scope.btn_list.items[$scope.parentMenu].button[$scope.one].sub_button[$scope.index]);
-			$scope.btn_list.items[$scope.parentMenu].button[$scope.one].sub_button[$scope.index].type = $scope.replyType;
-			$scope.btn_list.items[$scope.parentMenu].button[$scope.one].sub_button[$scope.index].key = $scope.reply_keyword;
-			$scope.btn_list.items[$scope.parentMenu].button[$scope.one].sub_button[$scope.index].url = $scope.reply_link;
-			$modalInstance.close($scope.btn_list.items[$scope.parentMenu].button[$scope.one].sub_button[$scope.index]); 
-		}
-		$scope.remindInfor(data);
-		// console.log(111,$scope.reply_keyword,$scope.btn_list.items[$scope.parentMenu].button[$scope.one]);
+		$scope.second.type = $scope.replyType;
+		if($scope.reply_keyword) {$scope.second.key = $scope.reply_keyword;}
+		if($scope.reply_link) {$scope.second.url = $scope.reply_link;}
+		$modalInstance.close($scope.second);
+		
+		notify({
+			message: '操作成功',
+			classes: 'alert-success'
+		});
+		// console.log(111,$scope.second,$scope.reply_link);
 		
 		$modalInstance.dismiss('cancel');  
 		$scope.replyType=null;
