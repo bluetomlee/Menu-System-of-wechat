@@ -8,13 +8,15 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
     	$timeout(function(){
     			$scope.refreshMenuList();
     	});
-    	$scope.applicationId = 1;
 
+    	$scope.applicationId = $routeParams.appId;
+    	$scope.applicationId = 1;
     	// 初始化菜单参数
     	var menuOption= {
     		id: "",
     		button:[{
-	           "name": "一级菜单",
+	           "name": "",
+	           "display": true,
 	           "sub_button":[
 	               {
 	                   "type":"",
@@ -78,52 +80,62 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 		$scope.remindPublish = function(data){
 			if(data){
 				prompt({
-					title: '由于微信客户端缓存，需要 24 小时微信客户端才会展现新菜单',
-					message: '可以尝试取消关注企业号后再次关注，即可看到创建后的效果'
+	                title: '提示',
+	                message: '<div><i class="fa fa-warning warning"></i>由于微信客户端缓存，需要24小时微信客户端才会展示新菜单</div>' +
+	                    '<div class="tips-small">(可以尝试取消关注 企业号后再次关注，即可看到创建后的效果)</div>',
+	                "buttons": [
+	                    {label:'确认发布',primary:true},
+	                    {label:'取消',cancel:true}
+	                ]
 				}).then(function(result){
 					$scope.publishMenu(data.id);
 				})
 			}
 		}
 
-		$scope.createOne = function(first,add){
+		$scope.createOne = function(first){
+			first.display = false;
+
+
 			// console.log($scope.disable_list.button);
-			prompt({
-				title: '请输入一级菜单名称',
-				input: true
-			}).then(function(result){
+			// prompt({
+			// 	title: '请输入一级菜单名称',
+			// 	input: true
+			// }).then(function(result){
 				
-				//console.log(menuOption)
+			// 	//console.log(menuOption)
 				
-				var newOne = cloneObj(menuOption);
+			// 	var newOne = cloneObj(menuOption);
 			
-				if(add == 1){
-					var a = $scope.btn_list.items.length;
-					$scope.btn_list.items.push(newOne);
-					$scope.btn_list.items[a].button[0].name = result;
-					$scope.newItemStatus = true;
-					console.log(a,$scope.btn_list)
+			// 	if(add == 1){
+			// 		var a = $scope.btn_list.items.length;
+			// 		$scope.btn_list.items.push(newOne);
+			// 		$scope.btn_list.items[a].button[0].name = result;
+			// 		$scope.newItemStatus = true;
+			// 		console.log(a,$scope.btn_list)
 					
-				}else{
-		    		var button = {
-			           "name":null
-		    		}
-					first.button.splice(0,0,button);
-					first.button[0].name = result;
-					// console.log(111,!first.button[0].type)
-				}
+			// 	}else{
+		 //    		var button = {
+			//            "name":null
+		 //    		}
+			// 		first.button.splice(0,0,button);
+			// 		first.button[0].name = result;
+			// 		// console.log(111,!first.button[0].type)
+			// 	}
 				
-			});
+			// });
 
 			
 		};
 		
-		
-		$scope.createTwo = function(first,$event){
-			var tmp = $scope.createTwoInput;
-			console.log(first,first.sub_button,tmp);
-			if($event.which === 13) first.sub_button.splice(0,0,{'name':tmp});
-			$scope.createTwoInput = '';
+		$scope.createTwo = function(first,tmp,index){			
+			var secondMenu;
+			if(!first.sub_button) first.sub_button = [];
+			if(!tmp)	return;
+			secondMenu = angular.copy(tmp);
+			first.sub_button.splice(0,0,{'name':secondMenu});
+			$scope.isShowSecondInput[index] = false;
+			// console.log($scope.createTwoInput[index],tmp,index);
 			// prompt({
 			// 	title: '请输入二级菜单名称',
 			// 	input: true
@@ -136,13 +148,14 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 		}
 
 		$scope.editInput = function(data){
-			prompt({
-				title: '请修改菜单名称',
-				input: true,
-				value: data.name
-			}).then(function(result){
-				data.name = result;
-			});
+			data.display = true;
+			// prompt({
+			// 	title: '请修改菜单名称',
+			// 	input: true,
+			// 	value: data.name
+			// }).then(function(result){
+			// 	data.name = result;
+			// });
 		}
 		 
 		$scope.removeItems = function(data,index){
@@ -279,55 +292,60 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 
 
         /*添加一级菜单*/
-        $scope.addFirstMenuFunc = function(){
-            var $firstMenu = $('<li class="menu-first-li">' +
-                '            <div class="menu-first-list">' +
-                '                <i class="fa fa-dot-circle-o"></i>' +
-                '                <span class="menu-first-title" ng-show="isCreateFirstMenu">帮助</span>' +
-                '                <span class="menu-first-title" ng-show="!isCreateFirstMenu">' +
-                '                    <input type="text" class="input-sm" ng-model="menuFirstTitle" placeholder="一级菜单名：4个汉字或8个字母以内"/>' +
-                '                </span>' +
-                '            </div>' +
-                '            <ul class="menu-sub-ul">' +
-                '               <li class="menu-sub-li">' +
-                '                   <span class="add-sub-menu" ng-click="addSubMenuTips()">' +
-                '<i class="fa fa-plus"></i>添加二级菜单' +
-                '</span>' +
-                '<span class="menu-reply-add menu-right" ng-click="addMenuReply()">添加回复</span>' +
-                '</li>' +
-                '</ul>' +
-                '  </li>');
-            $('.create-first-menu-ul').append($firstMenu);
-            angular.element(document).injector().invoke(function($compile) {
-                var scope = angular.element($firstMenu).scope();
-                $compile($firstMenu)(scope);
-            });
+        $scope.addFirstMenuFunc = function(tmpIbtn){
+			var newOne = cloneObj(menuOption),
+    		    button = {
+		           "name":null,
+		           "display": true
+	    		}
+			tmpIbtn.button.splice(0,0,button);
+
+            // var $firstMenu = $('<li class="menu-first-li">' +
+            //     '            <div class="menu-first-list">' +
+            //     '                <i class="fa fa-dot-circle-o"></i>' +
+            //     '                <span class="menu-first-title" ng-show="isCreateFirstMenu">帮助</span>' +
+            //     '                <span class="menu-first-title" ng-show="!isCreateFirstMenu">' +
+            //     '                    <input type="text" class="input-sm" ng-model="menuFirstTitle" placeholder="一级菜单名：4个汉字或8个字母以内"/>' +
+            //     '                </span>' +
+            //     '            </div>' +
+            //     '            <ul class="menu-sub-ul">' +
+            //     '               <li class="menu-sub-li">' +
+            //     '                   <span class="add-sub-menu" ng-click="addSubMenuTips()">' +
+            //     '<i class="fa fa-plus"></i>添加二级菜单' +
+            //     '</span>' +
+            //     '<span class="menu-reply-add menu-right" ng-click="addMenuReply()">添加回复</span>' +
+            //     '</li>' +
+            //     '</ul>' +
+            //     '  </li>');
+            // $('.create-first-menu-ul').append($firstMenu);
+            // angular.element(document).injector().invoke(function($compile) {
+            //     var scope = angular.element($firstMenu).scope();
+            //     $compile($firstMenu)(scope);
+            // });
         }
 
         /*添加二级菜单提示*/
-        $scope.addSubMenuFunc = function(event) {
-            console.log(event);
-            console.log(event.toElement.parentNode);
-            prompt({
-                title: '提示',
-                message: '<i class="fa fa-warning warning"></i> 确认添加二级菜单？一级菜单回复内容将失效。',
-                "buttons": [
-                    {label:'确定',primary:true},
-                    {label:'取消',cancel:true}
-                ]
-            }).then(function() {
-                var $subMenu = $(' <li class="menu-sub-li">' +
-                    '                 <span class="menu-first-title">' +
-                    '                     <input type="text" class="input-sm" ng-model="createTwoInput" ng-keyup="createTwo(first,$event)" placeholder="二级菜单名：7个汉字或14个字母以内"/>' +
-                    '                 </span>' +
-                    '              </li>');
+        $scope.addSubMenuFunc = function(first,tmp,index) {
+        	$scope.isShowSecondInput = {};
+        	$scope.createTwoInput = {};
+        	console.log(tmp,index);
+            if(!first.sub_button){
+	            prompt({
+	                title: '提示',
+	                message: '<i class="fa fa-warning warning"></i>确认添加二级菜单？一级菜单回复内容将失效。',
+	                "buttons": [
+	                    {label:'确定',primary:true},
+	                    {label:'取消',cancel:true}
+	                ]
+	            }).then(function() {
+	            	$scope.isShowSecondInput[index] = true;
+	            	// first.splice(0,0,)
+	            })
 
-                $subMenu.insertBefore(event.toElement.parentNode);
-                angular.element(document).injector().invoke(function($compile) {
-                    var scope = angular.element($subMenu).scope();
-                    $compile($subMenu)(scope);
-                });
-            })
+            }else{
+            	$scope.isShowSecondInput[index] = true;
+            }
+
         }
 
 
@@ -369,7 +387,8 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 						var btn = postData.button[p];
 						var sub_btn = btn.sub_button
 						//console.log(btn);
-						
+						delete btn.display;
+
 						if( sub_btn==undefined){
 							
 							if(btn.type=='' && btn.key==''){
@@ -408,12 +427,15 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 								}
 
 							}
+						
 							if(!t_arr.length){
 
 								delete btn.sub_button
 							}else{
 								btn.sub_button = t_arr;
 							}
+
+							console.log(btn)
 						
 						}
 						
@@ -453,8 +475,13 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 				}).success(function(data){
 					if(data.success){
 						prompt({
-							title: '保存成功,是否直接发布',
-							message: '由于微信客户端缓存，需要 24 小时微信客户端才会展现效果'
+				                title: '提示',
+				                message: '<div><i class="fa fa-check-circle success"></i> 保存成功，是否直接发布？</div>' +
+				                    '<div class="tips-small">由于微信客户端缓存，需要24小时微信客户端才会展示效果</div>',
+				                "buttons": [
+				                    {label:'直接发布',primary:true},
+				                    {label:'取消',cancel:true}
+				                ]
 						}).then(function(result){
 							console.log(postData.id);
 							$scope.remindPublish(postData);		
@@ -545,6 +572,14 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 				$scope.remindInfor(data);
 			})
 		};
+
+        // 应用详情页获取应用信息
+        $(function() {
+            var getAppUrl = '/japi/qiye/application/get?id=' + $routeParams.appId;
+            $http.get(getAppUrl).success(function(data) {
+                $scope.appinfo = data.item;
+            });
+        });
     }]
 );
 
