@@ -2,29 +2,44 @@
 // epdApp
 var menu_module = angular.module('epdApp.menu', ['ngRoute','ui.bootstrap']);
 
-menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', '$http', '$rootScope', '$modal','notify','prompt',
+menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', '$http', '$rootScope',  '$modal',  'notify', 'prompt',
     function($scope, $timeout, $routeParams, $http, $rootScope, $modal, notify, prompt) {
+    	$scope.cusRouteParams.appId = $routeParams.appId;
 
-    	$timeout(function(){
-    			$scope.refreshMenuList();
-    	});
+        // 页面初始化
+        $scope.init = function() {
+            $scope.refreshMenuList();
+        }
 
-    	$scope.applicationId = $routeParams.appId;
-    	$scope.applicationId = 1;
+        // 菜单tab模拟
+        $scope.menuSelect = {};
+        $scope.menuSelectAction = function(menuId) {
+            angular.forEach($scope.menuSelect, function(value, key) {
+                $scope.menuSelect[key] = false;
+            });
+
+            $scope.menuSelect[menuId] = true;
+            $scope.curMenuId = menuId;
+        }
+
+    	$scope.applicationId = parseInt($routeParams.appId);
+    	// alert($routeParams.appId);
+    	// $scope.applicationId = 1;
     	// 初始化菜单参数
     	var menuOption= {
-    		id: "",
+    		id: null,
     		button:[{
-	           "name": "",
+	           "name": null,
+	           "type": null,
 	           "display": true,
 	           "sub_button":[
 	               {
-	                   "type":"",
+	                   "type": null,
 	                   "name":"二级菜单",
-	                   "key":"",
-	                   "url":""
+	                   "key":null,
+	                   "url":null
 	               }
-	           ]            
+	           ]
     		}],
     		active:false
     	};
@@ -40,13 +55,13 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
     		.get("/japi/weixin/menu/list?applicationId=" + $scope.applicationId)
     		.success(function(data){
     			$scope.editAble = false;
-    			$scope.btn_list = data; 
+    			$scope.btn_list = data;
     		})
     	};
     	// 新建菜单
     	$scope.createNewMenu = function(){
     		$scope.isMenuList = !$scope.isMenuList;
-    		$scope.tmpIbtn = cloneObj(menuOption);
+    		$scope.tmpIbtn = angular.copy(menuOption);
     	};
 
     	$scope.remindConfirm = function(first){
@@ -91,7 +106,14 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 					$scope.publishMenu(data.id);
 				})
 			}
-		}
+		};
+		// 检测中文长度
+		$scope.chkCn = function(str){
+			var len;
+			for (var i = str.length - 1; i >= 0; i--) {
+				if(str[i].charCodeAt(i)>255) len++;
+			};
+		};
 
 		$scope.createOne = function(first){
 			first.display = false;
@@ -102,18 +124,18 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 			// 	title: '请输入一级菜单名称',
 			// 	input: true
 			// }).then(function(result){
-				
+
 			// 	//console.log(menuOption)
-				
+
 			// 	var newOne = cloneObj(menuOption);
-			
+
 			// 	if(add == 1){
 			// 		var a = $scope.btn_list.items.length;
 			// 		$scope.btn_list.items.push(newOne);
 			// 		$scope.btn_list.items[a].button[0].name = result;
 			// 		$scope.newItemStatus = true;
 			// 		console.log(a,$scope.btn_list)
-					
+
 			// 	}else{
 		 //    		var button = {
 			//            "name":null
@@ -122,19 +144,21 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 			// 		first.button[0].name = result;
 			// 		// console.log(111,!first.button[0].type)
 			// 	}
-				
+
 			// });
 
-			
+
 		};
-		
-		$scope.createTwo = function(first,tmp,index){			
+
+		$scope.createTwo = function(first,tmp,index){
 			var secondMenu;
 			if(!first.sub_button) first.sub_button = [];
 			if(!tmp)	return;
 			secondMenu = angular.copy(tmp);
-			first.sub_button.splice(0,0,{'name':secondMenu});
+			var len = first.sub_button.length + 1;
+			first.sub_button.splice(len,0,{'name':secondMenu});
 			$scope.isShowSecondInput[index] = false;
+			$scope.createTwoInput[index] = null;
 			// console.log($scope.createTwoInput[index],tmp,index);
 			// prompt({
 			// 	title: '请输入二级菜单名称',
@@ -143,8 +167,8 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 			// 	if(!first.sub_button){
 			// 		first.sub_button = [];
 			// 	}
-				
-			// });			
+
+			// });
 		}
 
 		$scope.editInput = function(data){
@@ -157,17 +181,23 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 			// 	data.name = result;
 			// });
 		}
-		 
-		$scope.removeItems = function(data,index){
+
+		$scope.removeItems = function(data,index,first){
 			prompt({
 				title:'Confirm',
 				message: '确认删除菜单'
 			}).then(function(){
-				data.splice(index,1);
+				if(first && data.length==1){
+					delete first.sub_button;
+				}else{
+					data.splice(index,1);
+				}
+
+				console.log(data)
 			})
 
 		}
-		
+
 		$scope.reply_keywords=[];
 		if(!$scope.reply_keywords.length){
 			$http.get("/japi/weixin/autoreply/keywords/listall?applicationId=" + $scope.applicationId).success(function(data){
@@ -175,10 +205,13 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 				$scope.reply_keywords = data.keywords;
 			})
 		}
-		
-		
+
+
 		$scope.open = function (parent,second,index,one) {
-			console.log(second);
+			console.log(11,parent,second);
+			if(!parent){
+				parent = $scope.btn_list.items.length -1;
+			}
 			$scope.parentMenu = parent;
 			$scope.second = second;
 			$scope.index = index;
@@ -201,12 +234,12 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 			});
 			modalInstance.result.then(function(saveReply){
 				if(one == undefined){
-					$scope.btn_list.items[$scope.parentMenu].button[$scope.index] = saveReply;
+					$scope.tmpIbtn.button[$scope.index] = saveReply;
 				}else{
-					$scope.btn_list.items[$scope.parentMenu].button[$scope.one].sub_button[$scope.index] = saveReply;
+					$scope.tmpIbtn.button[$scope.one].sub_button[$scope.index] = saveReply;
 				}
-				console.log(one,saveReply);
-			}); 
+				// console.log(parent,second,index,one);
+			});
 		};
 
         /*------------------------By Lifen  添加回复----------------------*/
@@ -259,23 +292,7 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
             })
         }
 
-        /*发布提示*/
-        $scope.releaseMenuTips = function() {
-            prompt({
-                title: '提示',
-                message: '<div><i class="fa fa-warning warning"></i>由于微信客户端缓存，需要24小时微信客户端才会展示新菜单</div>' +
-                    '<div class="tips-small">(可以尝试取消关注 企业号后再次关注，即可看到创建后的效果)</div>',
-                "buttons": [
-                    {label:'确认发布',primary:true},
-                    {label:'取消',cancel:true}
-                ]
-            }).then({
-                /*待续*/
-            })
-        }
-
         /*发布菜单，编辑发布中*/
-
         $scope.releaseMenuTips = function() {
             prompt({
                 title: '提示',
@@ -284,19 +301,21 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
                     {label:'确认发布',primary:true},
                     {label:'取消',cancel:true}
                 ]
-            }).then({
-                /*待续*/
-            })
+            }).then(function(){
+                var promise = $scope.publishMenu($scope.curMenuId);
+                promise.then(function(){
+                    $scope.refreshMenuList();
+                });
+            });
         }
-
-
 
         /*添加一级菜单*/
         $scope.addFirstMenuFunc = function(tmpIbtn){
-			var newOne = cloneObj(menuOption),
+			var newOne = angular.copy(menuOption.button),
     		    button = {
 		           "name":null,
-		           "display": true
+		           "display": true,
+		           "type":null
 	    		}
 			tmpIbtn.button.splice(0,0,button);
 
@@ -354,114 +373,115 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 
 		function cloneObj(obj){
 
-			var o, obj;  
-			if (obj.constructor == Object){  
-				o = new obj.constructor();   
-			}else{  
-				o = new obj.constructor(obj.valueOf());   
-			}  
-			for(var key in obj){  
-				if ( o[key] != obj[key] ){   
-					if ( typeof(obj[key]) == 'object' ){   
-						o[key] = cloneObj(obj[key]);  
-					}else{  
+			var o, obj;
+			if (obj.constructor == Object){
+				o = new obj.constructor();
+			}else{
+				o = new obj.constructor(obj.valueOf());
+			}
+			for(var key in obj){
+				if ( o[key] != obj[key] ){
+					if ( typeof(obj[key]) == 'object' ){
+						o[key] = cloneObj(obj[key]);
+					}else{
 						o[key] = obj[key];
-					}  
-				}  
-			}  
-			o.toString = obj.toString;  
-			o.valueOf = obj.valueOf;  
+					}
+				}
+			}
+			o.toString = obj.toString;
+			o.valueOf = obj.valueOf;
 			return o;
 
 		}
-		
+
 		$scope.saveMenu = function(ibtn){
-			
-			var postData = cloneObj(ibtn);
-			var _error=0;
-				if(postData.button.length){
-					
-					var tempBtnArr =[];
-					for(var p=0;p<postData.button.length;p++){
-						
-						var btn = postData.button[p];
-						var sub_btn = btn.sub_button
-						//console.log(btn);
-						delete btn.display;
+			 // ibtn = {"id":28,"button":[{"name":"12","sub_button":[{"description":"","name":"嘻嘻嘻","type":"click","key":"2066:::涂鸦j"}]};
+			// console.log(ibtn);
+			var postData = angular.copy(ibtn);
+			console.log(ibtn, postData);
+	      var _error=0;
+	      if(postData.button.length){
 
-						if( sub_btn==undefined){
-							
-							if(btn.type=='' && btn.key==''){
-								_error++;
-								notify({
-										message: '保存失败：请为菜单【'+btn.name+'】添加回复',
-										classes: 'alert-error'
-									})
-									
-								break;
+	        var tempBtnArr =[];
+	        for(var p = 0; p < postData.button.length; p++) {
 
-							}
+	          var btn = postData.button[p];
+	          var sub_btn = btn.sub_button;
+	          console.log(btn);
+	          delete btn.display;
 
-						}else{
-								
-							if(sub_btn.length<1)break;
-							var t_arr=[];
-							for(var i = 0;i<sub_btn.length;i++){
-								
-								// if(sub_btn[i].type == undefined){
-								// 	_error++;
-								// 	notify({
-								// 		message: '保存失败：请为菜单【'+sub_btn[i].name+'】添加回复',
-								// 		classes: 'alert-error'
-								// 	})
-									
-								// 	break;
-								// }
-								var arr = sub_btn[i] instanceof Array;
-								// alert(arr);
-								//console.log(sub_btn[i].type, sub_btn[i].type!='' && sub_btn[i].key!='');
-								if( sub_btn[i].type!='' && sub_btn[i].key!='' && !arr){
-									
-									t_arr.push(sub_btn[i])
+	          if(sub_btn == null || !sub_btn) {
+	            if(btn.type==null){
+	              _error++;
+	              notify({
+	                  message: '保存失败：请为菜单【'+btn.name+'】添加回复',
+	                  classes: 'alert-error'
+	                })
 
-								}
+	              return;
 
-							}
-						
-							if(!t_arr.length){
+	            }
 
-								delete btn.sub_button
-							}else{
-								btn.sub_button = t_arr;
-							}
+	          } else {
+	            // if( sub_btn.length == 0 ) return;
+	            var t_arr=[];
+	            for(var i = 0;i<sub_btn.length;i++) {
+	              if(sub_btn[i].type==null) {
+	                _error++;
+	                notify({
+	                    message: '保存失败：请为菜单【'+sub_btn[i].name+'】添加回复',
+	                    classes: 'alert-error'
+	                  })
+	                return ;
+	              }
 
-							console.log(btn)
-						
-						}
-						
-						tempBtnArr.push(btn);
-						
-						
-					};
-					
-					postData.button = tempBtnArr;
-					
-				}
-				
-				// console.log(postData);
-				if(_error>0){
-					return;
-				}
+	              // if(sub_btn[i].type == undefined){
+	              //  _error++;
+	              //  notify({
+	              //    message: '保存失败：请为菜单【'+sub_btn[i].name+'】添加回复',
+	              //    classes: 'alert-error'
+	              //  })
+
+	              //  break;
+	              // }
+	              var obj_bool = angular.isObject(sub_btn[i]);
+
+	              // console.log(sub_btn[i]);
+	              //console.log(sub_btn[i].type, sub_btn[i].type!='' && sub_btn[i].key!='');
+	              if(sub_btn[i].type != '' && obj_bool) {
+	                t_arr.push(sub_btn[i])
+	              }
+
+	            }
+
+	            console.log(t_arr,t_arr.length,angular.isArray(t_arr));
+
+	            // var arr_bool = angular.isArray(t_arr);
+
+	            if(!t_arr.length) {
+	              delete btn.sub_button
+	            } else {
+	              btn.sub_button = t_arr;
+	            }
+
+	          }
+	          tempBtnArr.push(btn);
+
+	        };
+
+	        console.log(postData.button.length,tempBtnArr,postData)
+	        postData.button = tempBtnArr;
+
+	      }
+
+	      // console.log(postData);
+	      if(_error>0){
+	        return;
+	      }
+
 			if(!postData.id){
-				$scope.createMenu(postData);
-			}
-			else{
-				
-				//console.log(postData);
-				//return;
-				
-				//return;
-				
+				var createMenu_promise = $scope.createMenu(postData, ibtn);
+			} else {
 				$http({
 					method: 'POST',
 					url:'/japi/weixin/menu/edit',
@@ -484,7 +504,7 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 				                ]
 						}).then(function(result){
 							console.log(postData.id);
-							$scope.remindPublish(postData);		
+							$scope.remindPublish(postData);
 
 						})
 					}else{
@@ -496,19 +516,27 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 		};
 
 		$scope.removeMenu = function(id){
-			console.log(id);
-			$http({
-				method: 'POST',
-				url: '/japi/weixin/menu/delete?id=' + id +'&applicationId=' + $scope.applicationId,
-				dataType: 'Json',
-				headers: {'Content-Type': 'application/x-www-form-urlencoded'}
-			}).success(function(data){
-				$scope.remindInfor(data);
-				$scope.refreshMenuList();
-			})
+            prompt({
+                title: '删除提示',
+                message: '<div><i class="fa fa-warning warning"></i> 确认删除该菜单？</div>',
+                "buttons": [
+                    {label:'删除',primary:true},
+                    {label:'取消',cancel:true}
+                ]
+            }).then(function(){
+                $http({
+                    method: 'POST',
+                    url: '/japi/weixin/menu/delete?id=' + id +'&applicationId=' + $scope.applicationId,
+                    dataType: 'Json',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+                }).success(function(data){
+                    $scope.remindInfor(data);
+                    $scope.refreshMenuList();
+                })
+            })
 		};
-		$scope.createMenu = function(ibtn){
-			$http({
+		$scope.createMenu = function(ibtn, curIBN) {
+			return $http({
 				method: 'POST',
 				url: '/japi/weixin/menu/add',
 				dataType: 'json',
@@ -520,6 +548,7 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 			}).success(function(data){
 				if(data.success){
 					ibtn.id = data.id;
+					curIBN.id = data.id;
 					$scope.remindInfor(data);
 					$scope.refreshMenuList();
 				}else{
@@ -531,7 +560,7 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 
 		$scope.publishMenu = function(id){
 			console.log(id);
-			$http({
+			return $http({
 				method: 'POST',
 				dataType: 'json',
 				url: '/japi/weixin/menu/publish?id=' + id +'&applicationId=' + $scope.applicationId,
@@ -549,11 +578,11 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 				};
 				//将操作那一项开启
 				cur_it.active = true;
-				
+
 				$scope.remindInfor(data);
 			})
 		};
-		
+
 		$scope.disable = function(id){
 			$http({
 				method: 'POST',
@@ -562,13 +591,13 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 			}).success(function(data){
 				var item = $scope.btn_list.items;
 				var cur_it;
-				
+
 				for (var i=0;i<item.length;i++) {
 					if(item[i].id == id)cur_it=item[i];
 				};
-				
+
 				cur_it.active = false;
-				
+
 				$scope.remindInfor(data);
 			})
 		};
@@ -585,7 +614,9 @@ menu_module.controller('MenuController', ['$scope', '$timeout', '$routeParams', 
 
 
 menu_module.controller('replyModalCtrl',['$scope', '$http','$timeout','$modal', '$modalInstance', 'notify', function($scope, $http, $timeout,$modal,$modalInstance,notify){
+
 	$scope.save_reply = function () {
+		console.log(111,$scope.reply_link);
 		if($scope.replyType=='keyword'){
 			if(!$scope.reply_keyword){
 				notify({
@@ -599,12 +630,27 @@ menu_module.controller('replyModalCtrl',['$scope', '$http','$timeout','$modal', 
 					$scope.replyType = $scope.reply_keywords[i].type;
 				}
 			};
+		} else if ($scope.replyType=='view') {
+
+                // 先验证URL是否有效，再判断是否需要补全http/https
+                var hasProport = /^(http|https)\:\/\//;
+                if($scope.cusRouteParams.checkUrl($scope.reply_link)) {
+                    if(!hasProport.test($scope.reply_link)) {
+                        $scope.reply_link = 'http://' + $scope.reply_link;
+                    }
+                } else {
+                    notify({
+                        message: '填写的URL出错了，请修改',
+                        classes: 'alert-success'
+                    });
+                    return false;
+                }
 		}
 		$scope.second.type = $scope.replyType;
 		if($scope.reply_keyword) {$scope.second.key = $scope.reply_keyword;}
 		if($scope.reply_link) {$scope.second.url = $scope.reply_link;}
 		$modalInstance.close($scope.second);
-		
+
 		notify({
 			message: '操作成功',
 			classes: 'alert-success'
